@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en" ng-app="myApp" ng-controller="MainController">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Gold Purchase Calculator</title>
+  <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.6.9/angular.min.js"></script>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background: #ffffff;
+      font-family: 'Segoe UI', sans-serif;
+      color: #333;
+    }
+
+    .calculator-container {
+      max-width: 600px;
+      background: #ffffff;
+      margin: 30px auto;
+      padding: 25px;
+      border-radius: 12px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.08);
+    }
+
+    h2 {
+      text-align: center;
+      color: #222;
+      font-size: 24px;
+      margin-bottom: 25px;
+    }
+
+    .form-group {
+      margin-bottom: 18px;
+    }
+
+    label {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+
+    input[type="number"] {
+      width: 100%;
+      padding: 10px;
+      font-size: 16px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      background: #fefefe;
+      box-sizing: border-box;
+    }
+
+    input:focus {
+      border-color: #999;
+      outline: none;
+    }
+
+    .result {
+      background-color: #f9f9f9;
+      border: 1px solid #eee;
+      padding: 20px;
+      border-radius: 10px;
+      margin-top: 30px;
+    }
+
+    .result h3 {
+      margin-top: 0;
+      color: #444;
+      font-size: 18px;
+      text-align: center;
+      margin-bottom: 15px;
+    }
+
+    .breakup-item {
+      display: flex;
+      justify-content: space-between;
+      margin: 8px 0;
+      font-size: 16px;
+    }
+
+    .breakup-item span:last-child {
+      font-weight: bold;
+    }
+
+    .total {
+      text-align: center;
+      font-size: 20px;
+      font-weight: bold;
+      color: #006400;
+      margin-top: 15px;
+      border-top: 1px solid #ccc;
+      padding-top: 12px;
+    }
+
+    .toggle-container {
+      display: flex;
+      justify-content: center;
+      margin-bottom: 25px;
+    }
+
+    .toggle-button {
+      width: 200px;
+      padding: 10px;
+      text-align: center;
+      background-color: #f0f0f0;
+      border: 1px solid #ccc;
+      border-radius: 30px;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+
+    .toggle-button.active {
+      background-color: #2d72d9;
+      color: white;
+    }
+
+    .calculator {
+      display: none;
+    }
+
+    .calculator.active {
+      display: block;
+    }
+
+    @media (max-width: 600px) {
+      .calculator-container {
+        margin: 15px;
+        padding: 20px;
+      }
+
+      h2 {
+        font-size: 20px;
+      }
+
+      .breakup-item {
+        font-size: 15px;
+      }
+
+      .total {
+        font-size: 18px;
+      }
+    }
+  </style>
+</head>
+
+<body ng-init="fetchData()">
+  <div class="calculator-container">
+    <div class="calculator active">
+      <h2>Gold Purchase Calculator</h2>
+
+      <div class="form-group">
+        <label for="weight">Weight (g):</label>
+        <input type="number" id="weight" ng-model="weight" placeholder="Enter the weight of gold in grams">
+      </div>
+
+      <div class="form-group">
+        <label for="rate">Gold Rate (₹ per gram):</label>
+        <input type="number" id="rate" ng-model="rate" placeholder="Auto-fetched or enter manually">
+      </div>
+
+      <div class="form-group">
+        <label for="wastage">Wastage (%):</label>
+        <input type="number" id="wastage" ng-model="wastage" placeholder="Enter wastage percentage (e.g., 10 for 10%)">
+      </div>
+
+      <div class="form-group">
+        <label for="stone">Stone Charges (₹):</label>
+        <input type="number" id="stone" ng-model="stone" placeholder="Enter stone charges, if any">
+      </div>
+
+      <div class="result" ng-if="weight && rate">
+        <h3>Gold Price Breakup</h3>
+        <div class="breakup-item">
+          <span>Base Price ({{weight}}g @ ₹{{rate}} per g)</span>
+          <span>₹{{ rate * weight | number:3 }}</span>
+        </div>
+        <div class="breakup-item">
+          <span>Wastage ({{wastage || 0}}%)</span>
+          <span>₹{{ (rate * weight * (wastage || 0) / 100) | number:3 }}</span>
+        </div>
+        <div class="breakup-item">
+          <span>Stone Charges</span>
+          <span>₹{{ (stone || 0) | number:3 }}</span>
+        </div>
+        <div class="breakup-item">
+          <span>Sub Total</span>
+          <span>₹{{ gTax = ((rate + (rate * (wastage || 0) / 100)) * weight) + (stone || 0) | number:3 }}</span>
+        </div>
+        <div class="breakup-item">
+          <span>GST (3%)</span>
+          <span>₹{{ (gTax * 3 / 100) | number:3 }}</span>
+        </div>
+        <div class="total">
+          Final Price: ₹{{ (gTax * 1.03) | number:3 }}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    var app = angular.module('myApp', []);
+    app.controller('MainController', function ($scope, $http) {
+      $scope.fetchData = function () {
+        var apiUrl = "https://bcast.slnbullion.com/VOTSBroadcastStreaming/Services/xml/GetLiveRateByTemplateID/slnmjdma";
+        $http.get(apiUrl).then(function (response) {
+          var rateData = response.data.split("\n")[0].split("\t");
+          $scope.rate = Number(rateData[4]);   // gold rate
+        }, function (error) {
+          console.error("Error fetching rate:", error);
+          // Optional: Set a default rate if fetching fails for better user experience
+          // $scope.rate = 6500; // Example default gold rate
+        });
+      };
+
+      // Set gold calculator as the only and default view
+      $scope.currentCalculator = 'gold';
+    });
+  </script>
+</body>
+</html>
